@@ -11,6 +11,14 @@ void solve_nonogram(int);
 int check_answer();
 
 
+struct node
+{
+	int *map;
+	struct node *next;
+};
+typedef struct node Node;
+Node *front, *rear;
+
 int question_num = 1;
 int nonogram_size = 5;
 
@@ -18,6 +26,7 @@ int col_rule[15][9];
 int row_rule[15][9];
 int transition_ans_map[15][15];
 int ans_map[15][15];
+
 
 int main(int argc, char *argv[]){
 	if(argc != 3){
@@ -225,4 +234,25 @@ void modify_ans_format(){
 		}
 		printf("\n");
 	}
+}
+
+
+void init_queue(){
+	front = (Node*) malloc(sizeof(Node));
+	rear = (Node*) malloc(sizeof(Node));
+	front->next = NULL;
+	rear->next = NULL;
+}
+
+void enqueue(int *map){
+	Node *new_node = (Node*) malloc(sizeof(Node));
+	if(!new_node)
+		exit(1);
+	if(front->next == NULL){
+		front->next = new_node;
+	}
+	new_node->map = map;
+	new_node->next = NULL;
+	rear->next = new_node;
+	rear = new_node;
 }
