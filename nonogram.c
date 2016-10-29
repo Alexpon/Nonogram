@@ -8,11 +8,13 @@ void initial_ans_map();
 void rough_col_initial();
 void modify_ans_format(int *);
 void solve_nonogram(int);
+void find_next_step(int *);
 int check_answer();
 void init_queue();
 int queue_empty();
 void enqueue(int *);
 int *dequeue();
+
 
 struct node
 {
@@ -114,10 +116,146 @@ void read_rule_and_solve(char *file){
 void solve_nonogram(int question_num){
 	initial_ans_map();
     rough_col_initial();
-   	int *demap = dequeue();
-    modify_ans_format(demap);
-	if(check_answer()==1){
-		printf("Find the answer!\n");
+    int *demap = NULL;
+    //int test_cnt = 20;
+    while(queue_empty()!=1){
+    	//test_cnt--;
+   		demap = dequeue();
+    	modify_ans_format(demap);
+		if(check_answer()==1){
+			printf("Hey! Find the answer!\n");
+			exit(1);
+			break;
+			//print the answer
+		}
+		else{
+			find_next_step(demap);
+		}
+	}
+}
+
+void rough_col_initial(){
+	////// Pointer base
+	int *ptr_map = malloc(nonogram_size*nonogram_size*sizeof(int));
+	int k, now_row;
+	for (int i=0; i<nonogram_size; i++){
+		k=2;
+		now_row = 0;
+		if(col_rule[i][1] != 0){
+			for (int m=0; m<col_rule[i][1]; m++){
+				*(ptr_map+(now_row+m)*nonogram_size+i) = 1;
+			}
+			now_row += col_rule[i][1];
+		}
+		while(col_rule[i][k] != 0){
+			for (int m=0; m<col_rule[i][k]+1; m++){
+				*(ptr_map + (now_row+m)*nonogram_size+i) = k;
+			}
+			now_row += col_rule[i][k]+1;
+			k++;
+		}
+	}
+
+	enqueue(ptr_map);	
+}
+
+void modify_ans_format(int *ptr_ans_map){
+	initial_ans_map();
+	for (int j=0; j<nonogram_size; j++){
+		int pre = 1;
+		for (int i=0; i<nonogram_size; i++){
+			if(*(ptr_ans_map+i*nonogram_size+j)==1){
+				ans_map[i][j] = 1;
+			}
+			else if(*(ptr_ans_map+i*nonogram_size+j)!=0 && *(ptr_ans_map+i*nonogram_size+j)==pre){
+				ans_map[i][j] = 1;
+			}
+			pre = *(ptr_ans_map+i*nonogram_size+j);
+		}
+	}
+	printf("Before_Map:\n");
+	for (int i=0; i<nonogram_size; i++){
+		for (int j=0; j<nonogram_size; j++){
+			printf("%d ", *(ptr_ans_map+i*nonogram_size+j));
+		}
+		printf("\n");
+	}
+
+	printf("Ans_Map:\n");
+	for (int i=0; i<nonogram_size; i++){
+		for (int j=0; j<nonogram_size; j++){
+			printf("%d ", ans_map[i][j]);
+		}
+		printf("\n");
+	}
+
+}
+
+void find_next_step(int *pre_map){
+	int pre, now;
+	int *new_map;
+
+	for (int j=0; j<nonogram_size; j++){
+		new_map = malloc(nonogram_size*nonogram_size*sizeof(int));
+		memcpy(new_map, pre_map, nonogram_size*nonogram_size*sizeof(int));
+		for (int i=nonogram_size-2; i>=0; i--){
+			pre = *(pre_map+(i+1)*nonogram_size+j);
+			now = *(pre_map+i*nonogram_size+j);
+			if(pre==0 && now!=0){
+				*(new_map+(i+1)*nonogram_size+j) = now;
+				
+				while(*(pre_map+(i-1)*nonogram_size+j)==now){
+					*(new_map+i*nonogram_size+j) = now;
+					i--;
+				}
+				*(new_map+i*nonogram_size+j) = 0;
+				enqueue(new_map);
+				break;
+			}
+		}
+	}
+}
+
+void init_queue(){
+	front = (Node*) malloc(sizeof(Node));
+	rear = (Node*) malloc(sizeof(Node));
+	front->next = NULL;
+	rear->next = NULL;
+}
+
+int queue_empty(){
+	if(front->next == NULL)
+		return 1;
+	else
+		return 0;
+}
+
+void enqueue(int *map){
+	Node *new_node = (Node*) malloc(sizeof(Node));
+	
+	if(!new_node)
+		exit(1);
+	if(front->next == NULL){
+		front->next = new_node;
+	}
+	
+	new_node->map = map;
+	new_node->next = NULL;
+	rear->next = new_node;
+	rear = new_node;
+}
+
+int *dequeue(){
+	if(queue_empty()==1){
+		printf("Queue is empty!\n");
+		return NULL;
+	}
+	else{
+		Node *p = front->next;
+		int *map = p->map;
+		front->next = p->next;
+		free(p);
+		return map;
 	}
 }
 
@@ -183,103 +321,4 @@ int check_answer(){
 		}
 	}
 	return 1;
-}
-
-void rough_col_initial(){
-	////// Pointer base
-	int *ptr_map = malloc(nonogram_size*nonogram_size*sizeof(int));
-	int k, now_row;
-	for (int i=0; i<nonogram_size; i++){
-		k=2;
-		now_row = 0;
-		if(col_rule[i][1] != 0){
-			for (int m=0; m<col_rule[i][1]; m++){
-				*(ptr_map+(now_row+m)*nonogram_size+i) = 1;
-			}
-			now_row += col_rule[i][1];
-		}
-		while(col_rule[i][k] != 0){
-			for (int m=0; m<col_rule[i][k]+1; m++){
-				*(ptr_map + (now_row+m)*nonogram_size+i) = k;
-			}
-			now_row += col_rule[i][k]+1;
-			k++;
-		}
-	}
-
-	enqueue(ptr_map);	
-}
-
-void modify_ans_format(int *ptr_ans_map){
-	for (int j=0; j<nonogram_size; j++){
-		int pre = 1;
-		for (int i=0; i<nonogram_size; i++){
-			if(*(ptr_ans_map+i*nonogram_size+j)==1){
-				ans_map[i][j] = 1;
-			}
-			else if(*(ptr_ans_map+i*nonogram_size+j)!=0 && *(ptr_ans_map+i*nonogram_size+j)==pre){
-				ans_map[i][j] = 1;
-			}
-			pre = *(ptr_ans_map+i*nonogram_size+j);
-		}
-	}
-	printf("Before_Map:\n");
-	for (int i=0; i<nonogram_size; i++){
-		for (int j=0; j<nonogram_size; j++){
-			printf("%d ", *(ptr_ans_map+i*nonogram_size+j));
-		}
-		printf("\n");
-	}
-
-	printf("Ans_Map:\n");
-	for (int i=0; i<nonogram_size; i++){
-		for (int j=0; j<nonogram_size; j++){
-			printf("%d ", ans_map[i][j]);
-		}
-		printf("\n");
-	}
-}
-
-
-void init_queue(){
-	front = (Node*) malloc(sizeof(Node));
-	rear = (Node*) malloc(sizeof(Node));
-	front->next = NULL;
-	rear->next = NULL;
-}
-
-int queue_empty(){
-	if(front->next == NULL)
-		return 1;
-	else
-		return 0;
-}
-
-void enqueue(int *map){
-	Node *new_node = (Node*) malloc(sizeof(Node));
-	
-	if(!new_node)
-		exit(1);
-	if(front->next == NULL){
-		front->next = new_node;
-	}
-	
-	new_node->map = map;
-	new_node->next = NULL;
-	rear->next = new_node;
-	rear = new_node;
-}
-
-int *dequeue(){
-	if(queue_empty()==1){
-		printf("Queue is empty!\n");
-		return NULL;
-	}
-	else{
-		Node *p = front->next;
-		int *map = p->map;
-		front->next = p->next;
-		free(p);
-		return map;
-	}
 }
