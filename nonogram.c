@@ -10,12 +10,20 @@ void modify_ans_format(int *);
 void bfs_solve(int);
 void find_next_step(int *);
 int check_answer();
+void solver(int, int);
 void write_answer(int);
+int check_close_list(int *);
 
 void init_queue();
 void enqueue(int *);
 int *dequeue();
 void free_queue();
+
+void dfs_solve(int);
+void push(int *);
+int *pop();
+void find_next_state(int *);
+
 
 struct node
 {
@@ -23,14 +31,17 @@ struct node
 	struct node *next;
 };
 typedef struct node Node;
-Node *front, *rear;
+Node *front, *rear, *top;
 
 int question_num = 1;
 int nonogram_size = 10;
+int close_size=150;
 
 int col_rule[15][9];
 int row_rule[15][9];
 int ans_map[15][15];
+int *close_list[150];
+int close_idx=0;
 
 int main(int argc, char *argv[]){
 	if(argc != 3){
@@ -50,6 +61,9 @@ void initial_rule(){
 			row_rule[i][j] = 0;
 		}
 	}
+	for (int i=0; i<50; i++){
+		close_list[i]=NULL;
+	}
 }
 
 void initial_ans_map(){
@@ -58,6 +72,20 @@ void initial_ans_map(){
 			ans_map[i][j] = 0;
 		}
 	}
+}
+
+void solver(int select, int num){
+    switch(select) { 
+        case 1: 
+            
+            break; 
+        case 2: 
+            bfs_solve(num); 
+            break; 
+        default: 
+            printf("\nError input"); 
+    } 
+
 }
 
 void read_rule_and_solve(char *file){
@@ -73,15 +101,19 @@ void read_rule_and_solve(char *file){
 	int row_rule_num;
 	int col_cnt = 0;
 	int row_cnt = 0;
-
+	int select = 1;
 	if (fptr==NULL){
         printf ("Error in reading the file!\n");
         exit(1);
     }
+
+    printf("Please choose the solver (1.DFS 2.BFS): ");
+	scanf("%d", &select); 
+	
     while (fgets(tmp, 16, fptr) != NULL){
     	if (tmp[0] == '$' && flag==1){
     		q_num = tmp[1]-49;	//ASCII to int
-    		bfs_solve(q_num);
+    		solver(select, q_num);
     		initial_rule();
     		rule_size = 0;
     	}
@@ -110,7 +142,7 @@ void read_rule_and_solve(char *file){
     	}
 
     }
-    bfs_solve(q_num+1);
+    solver(select, q_num+1);
 }
 
 void bfs_solve(int question_num){
@@ -119,9 +151,10 @@ void bfs_solve(int question_num){
 	init_queue();
     rough_col_initial();
     int *demap = NULL;
-    
+
     int test=1;
     while(front->next){
+    	printf("%d\n", test);
     	test ++;
     	demap = dequeue();
     	modify_ans_format(demap);
@@ -129,12 +162,90 @@ void bfs_solve(int question_num){
 			printf("%d\n", test);
 			printf("Find the answer!\n");
 			write_answer(question_num);
+			//free_queue();
 			break;
 		}
 		else{
 			find_next_step(demap);
 		}
 	}
+}
+
+void dfs_solve(){
+	printf("DFS Starting......\n");
+	top = NULL;
+	initial_ans_map();
+	rough_col_initial();
+	int *popmap = NULL;
+	int test=1;
+    while(top!=NULL){
+    	printf("%d\n", test);
+    	test ++;
+    	popmap = pop();
+    	modify_ans_format(popmap);
+		if(check_answer()==1){
+			printf("%d\n", test);
+			printf("Find the answer!\n");
+			write_answer(question_num);
+			break;
+		}
+		else{
+			find_next_state(popmap);
+		}
+	}
+}
+
+void find_next_state(int *pre_map){
+	int pre, now;
+	int *new_map;
+	int i= nonogram_size-2;
+	int last = nonogram_size*nonogram_size;
+	int move_col = *(pre_map+last);
+	int move = 0;
+	while(move != 0){
+		while(i>=0){
+			pre = *(pre_map+(i+1)*nonogram_size+move_col);
+			now = *(pre_map+i*nonogram_size+move_col);
+			if(pre==0 && now!=0 && now<10){
+				new_map = malloc((nonogram_size*nonogram_size+1)*sizeof(int));
+				memcpy(new_map, pre_map, nonogram_size*nonogram_size*sizeof(int));
+				*(new_map+(i+1)*nonogram_size+move_col) = now;
+				while(i>0 && *(pre_map+(i-1)*nonogram_size+move_col)==now){
+					*(new_map+i*nonogram_size+move_col) = now;
+					i--;
+					if(i<1){
+						break;
+					}
+				}
+				*(new_map+i*nonogram_size+move_col) = 0;
+				*(new_map+last) = move_col+1;
+				//cut_off_here()
+				push(new_map);
+				move = 1;
+			}
+			i--;
+		}
+		move_col += 1;
+	}
+}
+
+void push(int *map){
+	Node *new_node = (Node*) malloc(sizeof(Node));
+	new_node->map = map;
+	new_node->next = top;
+	top = new_node;
+}
+
+int *pop(){
+	if(top==NULL)
+		return NULL;
+	int *map;
+	Node *p;
+	p = top;
+	map = p->map;
+	top = top->next;
+	free(p);
+	return map;
 }
 
 void rough_col_initial(){
@@ -164,8 +275,9 @@ void rough_col_initial(){
 			}
 		}
 	}
-	*(ptr_map+(nonogram_size-1)*nonogram_size+nonogram_size) = 0;
-	enqueue(ptr_map);	
+	*(ptr_map+nonogram_size*nonogram_size) = 0;
+	enqueue(ptr_map);
+	push(ptr_map);	
 }
 
 void modify_ans_format(int *ptr_ans_map){
@@ -182,18 +294,37 @@ void modify_ans_format(int *ptr_ans_map){
 			pre = *(ptr_ans_map+i*nonogram_size+j);
 		}
 	}
+	/*
+	printf("Before_Map:\n");
+	for (int i=0; i<nonogram_size; i++){
+		for (int j=0; j<nonogram_size; j++){
+			printf("%d ", *(ptr_ans_map+i*nonogram_size+j));
+		}
+		printf("\n");
+	}
+		printf("Ans_Map:\n");
+	for (int i=0; i<nonogram_size; i++){
+		for (int j=0; j<nonogram_size; j++){
+			printf("%d ", ans_map[i][j]);
+		}
+		printf("\n");
+	}
+	*/
+	
 }
+
 
 void find_next_step(int *pre_map){
 	int pre, now;
 	int *new_map;
-	int last = (nonogram_size-1)*nonogram_size + nonogram_size;
+	int i;
+	int last = nonogram_size*nonogram_size;
 	for (int j= *(pre_map+last); j<nonogram_size; j++){
-		int i = nonogram_size-2;
+		i = nonogram_size-2;
 		while(i>=0){
 			pre = *(pre_map+(i+1)*nonogram_size+j);
 			now = *(pre_map+i*nonogram_size+j);
-			if(pre==0 && now!=0){
+			if(pre==0 && now!=0 && now<10){
 				new_map = malloc((nonogram_size*nonogram_size+1)*sizeof(int));
 				memcpy(new_map, pre_map, nonogram_size*nonogram_size*sizeof(int));
 				*(new_map+(i+1)*nonogram_size+j) = now;
@@ -206,12 +337,37 @@ void find_next_step(int *pre_map){
 				}
 				*(new_map+i*nonogram_size+j) = 0;
 				*(new_map+last) = j;
-				enqueue(new_map);
+				if(check_close_list(new_map)==1)
+					enqueue(new_map);
 			}
 			i--;
 		}
 
 	}
+}
+
+
+int check_close_list(int *new_map){
+	int flag;
+	for (int k=0; k<close_size; k++){
+		if(close_list[k]!=NULL){
+			flag = 0;
+			for (int i=0; i<nonogram_size; i++){
+				for (int j=0; j<nonogram_size; j++){
+						if(*(close_list[k]+i*nonogram_size+j)!=*(new_map+i*nonogram_size+j)){
+							flag = 1;
+							i=nonogram_size;
+							j=nonogram_size;     
+						}
+				}
+			}
+			if(flag==0)
+				return 0;
+		}
+	}
+	close_list[close_idx] = new_map;
+	close_idx=(close_idx+1)%close_size;
+	return 1;
 }
 
 void init_queue(){
@@ -262,19 +418,14 @@ void free_queue(){
 int check_answer(){
 	// check total num of row or col
 	int row_cnt;
-	int col_cnt;
 	for (int i=0; i<nonogram_size; i++){
 		row_cnt = 0;
-		col_cnt = 0;
 		for (int j=0; j<nonogram_size; j++){
 			if (ans_map[i][j] != 0){
 				row_cnt ++;
 			}
-			if (ans_map[j][i] != 0){
-				col_cnt ++;
-			}
 		}
-		if (row_rule[i][0] != row_cnt || col_rule[i][0] != col_cnt){
+		if (row_rule[i][0] != row_cnt){
 			return 0;
 		}
 	}
@@ -301,25 +452,6 @@ int check_answer(){
 		}
 	}
 
-	// check col in detail
-	for (int i=0; i<nonogram_size; i++){
-		rule_ptr = 1;
-		cnt = 0;
-		for (int j=0; j<nonogram_size; j++){
-			if(ans_map[j][i] == 0){
-				if(cnt != 0 && col_rule[i][rule_ptr] != cnt){
-					return 0;
-				}
-				else if(cnt != 0){
-					rule_ptr ++;
-					cnt = 0;
-				}
-			}
-			else{
-				cnt ++;
-			}
-		}
-	}
 	return 1;
 }
 
