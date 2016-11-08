@@ -48,7 +48,6 @@ def checker(col_rule, row_now, row_num):
 	nono_size = len(col_rule)
 	for id, col in enumerate(col_rule):
 		zero_num = nono_size - sum(col)
-		print(id, col, zero_num)
 		cnt = 0
 		for i in range(row_num):
 			cnt = cnt+1 if row_now[i][id]==0 else cnt
@@ -59,15 +58,24 @@ def checker(col_rule, row_now, row_num):
 		ptr = 0
 		cnt = 0
 		for i in range(row_num):
-			if (row_now[i][id] == 0):
+			reset = False
+			if(ptr>len(col)-1):
+				if row_now[i][id]==0:
+					reset = True
+					continue
+				else:
+					return False
+			elif (row_now[i][id]==0):
 				if (cnt != 0 and col[ptr] < cnt):
 					return False
 				elif(cnt != 0):
 					ptr += 1
+					reset = True
 					cnt = 0
 			else:
 				cnt += 1
-		if (col[ptr-1] < cnt):
+		ptr = ptr-1 if reset else ptr
+		if (col[ptr] < cnt):
 			return False
 			
 	return True;
@@ -85,6 +93,32 @@ def normalizer(row_now, row_num):
 		nor_row.append(tmp)
 	return nor_row
 
+solution = np.zeros(15, dtype=int)
+
+def backtrack(row_per_num, dimention, col_rule, row_permutation):
+	row_now = []
+	nono_size = len(col_rule)
+	for r in range(dimention):
+			c = solution[r]
+			row_now.append(row_permutation[r][c])
+
+	if(dimention==nono_size):
+		if checker(col_rule, row_now, nono_size):
+			ans = normalizer(row_now,nono_size)
+			for i in ans:
+				print(i)
+			exit(1)
+		return
+
+	elif dimention>0:
+		if not checker(col_rule, row_now, dimention):
+			return
+
+	for i in range(row_per_num[dimention]):
+		solution[dimention] = i
+		backtrack(row_per_num, dimention+1, col_rule, row_permutation)
+	
+
 def main():
 	if(len(sys.argv)!=3):
 		print("Input format: python3 nonogram.py [data file path] [nonogram size]")
@@ -93,13 +127,10 @@ def main():
 		col_rule, row_rule = read_rule(sys.argv[1], sys.argv[2])
 	
 	row_permutation = build_tree(row_rule)
-	test = []
-	test.append(row_permutation[0][2])
-	test.append(row_permutation[1][1])
-	test.append(row_permutation[2][1])
-	test.append(row_permutation[3][0])
-	test.append(row_permutation[4][0])
-	print (checker(col_rule, test, 5))
+	row_per_num = np.zeros(int(sys.argv[2]), dtype=int)
+	for id, per in enumerate(row_permutation):
+		row_per_num[id] = len(per)
+	backtrack(row_per_num, 0, col_rule, row_permutation)
 	
 
 if __name__ == '__main__':
