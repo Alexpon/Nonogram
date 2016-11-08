@@ -45,7 +45,6 @@ def build_tree(row_rule):
 
 def checker(col_rule, row_now, row_num):
 	row_now = normalizer(row_now, row_num)
-	#print (row_now)
 	nono_size = len(col_rule)
 	for id, col in enumerate(col_rule):
 		zero_num = nono_size - sum(col)
@@ -55,9 +54,10 @@ def checker(col_rule, row_now, row_num):
 			cnt = cnt+1 if row_now[i][id]==0 else cnt
 		if zero_num < cnt:
 			return False
-## something wrong here
+
 	for id, col in enumerate(col_rule):
-		ptr = 1
+		ptr = 0
+		cnt = 0
 		for i in range(row_num):
 			if (row_now[i][id] == 0):
 				if (cnt != 0 and col[ptr] < cnt):
@@ -67,7 +67,7 @@ def checker(col_rule, row_now, row_num):
 					cnt = 0
 			else:
 				cnt += 1
-		if (col[ptr] < cnt):
+		if (col[ptr-1] < cnt):
 			return False
 			
 	return True;
@@ -99,18 +99,7 @@ def main():
 	test.append(row_permutation[2][1])
 	test.append(row_permutation[3][0])
 	test.append(row_permutation[4][0])
-	"""
-	test.append(row_permutation[5][0])
-	test.append(row_permutation[6][0])
-	test.append(row_permutation[7][0])
-	test.append(row_permutation[8][0])
-	test.append(row_permutation[9][0])
-	"""
-
 	print (checker(col_rule, test, 5))
-
-	#print (row_permutation[4])
-	#print (len(row_permutation[7]))
 	
 
 if __name__ == '__main__':
