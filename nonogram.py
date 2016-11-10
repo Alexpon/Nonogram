@@ -2,18 +2,55 @@ import numpy as np
 import sys as sys
 import itertools as it
 
+
+finish = False
+
 def read_rule(filename, size):
 	rf = open(filename)
 	lines = rf.readlines()
+	size = int(size)
 	rf.close()
+	tmp_rule = []
 	for line in lines:
-		if(line[0]=='$'):
+		if(line[0]=='$' and line[1]=='1' and len(line)==3):
+			print (line[:-1])
+			f = open('ans.txt', 'a')
+			f.write(line)
+			f.close()
+
+		elif(line[0]=='$'):
+			col_rule, row_rule = get_rule(tmp_rule, size)
+			row_permutation = build_tree(row_rule)
+			row_per_num = np.zeros(size, dtype=int)
+			for id, per in enumerate(row_permutation):
+				row_per_num[id] = len(per)
+			backtrack(row_per_num, 0, col_rule, row_permutation)
 			tmp_rule = []
-			print (line)
+			global finish
+			finish = False
+			print ()
+			print (line[:-1])
+			f = open('ans.txt', 'a')
+			f.write(line)
+			f.close()
 		else:
 			tmp = line.splitlines()
-			for i in tmp:
-				tmp_rule.append(i.split('\t'))
+			if(tmp==['']):
+				tmp_rule.append('0')
+			else:
+				for i in tmp:
+					tmp_rule.append(i.split('\t'))
+	
+
+	col_rule, row_rule = get_rule(tmp_rule, size)
+	row_permutation = build_tree(row_rule)
+	row_per_num = np.zeros(size, dtype=int)
+	for id, per in enumerate(row_permutation):
+		row_per_num[id] = len(per)
+	backtrack(row_per_num, 0, col_rule, row_permutation)
+		
+
+def get_rule(tmp_rule, size):
 	col_rule = tmp_rule[:int(size)]
 	row_rule = tmp_rule[int(size):]
 	for i, col in enumerate(col_rule):
@@ -22,7 +59,8 @@ def read_rule(filename, size):
 		row_rule[i] = list(map(int, row))
 		
 	return col_rule, row_rule
-	
+
+
 def build_tree(row_rule):
 	nono_size = len(row_rule)
 	row_permutation = []
@@ -106,10 +144,13 @@ def backtrack(row_per_num, dimention, col_rule, row_permutation):
 		if checker(col_rule, row_now, nono_size):
 			ans = normalizer(row_now,nono_size)
 			for i in ans:
-				print(i)
-			exit(1)
+				print(i[:nono_size])
+			write_ans(ans, nono_size)
+			global finish
+			finish = True
 		return
 
+	# Cut Off Here
 	elif dimention>0:
 		if not checker(col_rule, row_now, dimention):
 			return
@@ -117,20 +158,24 @@ def backtrack(row_per_num, dimention, col_rule, row_permutation):
 	for i in range(row_per_num[dimention]):
 		solution[dimention] = i
 		backtrack(row_per_num, dimention+1, col_rule, row_permutation)
+		if finish:
+			return
 	
+def write_ans(ans, size):
+	f = open('ans.txt', 'a')
+	for i in ans:
+		for j in range(size):
+			f.write(str(i[j]))
+			f.write('\t')
+		f.write('\n')
+	f.close()
 
 def main():
 	if(len(sys.argv)!=3):
 		print("Input format: python3 nonogram.py [data file path] [nonogram size]")
 		exit(1)
 	else:
-		col_rule, row_rule = read_rule(sys.argv[1], sys.argv[2])
-	
-	row_permutation = build_tree(row_rule)
-	row_per_num = np.zeros(int(sys.argv[2]), dtype=int)
-	for id, per in enumerate(row_permutation):
-		row_per_num[id] = len(per)
-	backtrack(row_per_num, 0, col_rule, row_permutation)
+		read_rule(sys.argv[1], sys.argv[2])
 	
 
 if __name__ == '__main__':
